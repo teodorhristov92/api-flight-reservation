@@ -12,7 +12,7 @@
                 <div class="book-panel pt-4">
                     <div class="p-4 book-panel-inside">
                         <h1><i class="fa-solid fa-plane-departure fa-beat-fade" style="color: #0B5ED7;"></i> Book you flight</h1>
-                        <form>
+                        <div>
                             <div class="form-group row">
                                 <label for="flightId" class="col-sm-12 col-form-label">Flight ID:</label>
                                 <div class="col-sm-12">
@@ -21,9 +21,9 @@
                             </div>
 
                             <div class="form-group row">
-                                <label for="passengerName" class="col-sm-12 col-form-label">Passenger Name:</label>
+                                <label for="passengerName" class="col-sm-12 col-form-label">Passenger ID:</label>
                                 <div class="col-sm-12">
-                                <input type="text" class="form-control" id="passengerName" placeholder="Name">
+                                <input type="text" class="form-control" id="passengerName" placeholder="Name" onkeyup="if(value<0) value=0;">
                                 </div>
                             </div>
 
@@ -40,38 +40,37 @@
                                 </div>
                             </div>
 
+                            <div id="selectedSeat" class="form-group row pt-2">
+                                <label class="w-auto" for="typeSeat">Select seat type</label>
+                                <select class="w-auto" name="seatType" id="typeSeat">
+                                    <option value="Economy">Economy</option>
+                                    <option value="Business">Business</option>
+                                    <option value="First">First</option>
+                                </select>
+                            </div>
+
                             <div class="form-group row pt-4">
                                 <div class="col-sm-10">
-                                    <button class="btn btn-primary" onclick="bookSeat()">Sign in</button>
+                                    <button id="submitBtn" class="btn btn-primary">Sign in</button>
                                 </div>
                             </div>
-                        </form>
+                        </div>
                     </div>   
                 </div>
             </div>
             <div class="col-md-12 col-lg-7">
-                
-                
-
                 <div id="imageDiv" class="fade-div" style="">
                     <img class="image-plane" src="{{ asset('images/simon-maage-C9dhUVP-o6w-unsplash.jpg') }}" alt="Airplane Wing" style="border-radius: 15px;">
                 </div>
-
                 <div id="planeDiv" class="fade-div">
                     <div class="plane-wrapper plane-color"></div>
-                 
-
                     <div id="planeSeats" class="plane-color" style="display: flex; flex-direction: column; gap: 10px;">
-                        
                     </div>
                 </div>
             </div>
         </div>
     </div>
    
-
-
-
     @include('layouts.footer')
 
     <script>
@@ -87,21 +86,10 @@
             }
         }
 
-        function getMaxSeats(flightId) {
-            fetch(`/flight/${flightId}/max-seats`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Max Seats:', data.max_seats);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-            });
-        }
-
         function showSeatMap(hide) {
             const imageDiv = document.getElementById('imageDiv');
             const planeDiv = document.getElementById('planeDiv');
-            console.log('hi');
+
             if (hide) {
                 imageDiv.classList.add('hidden');
                 planeDiv.classList.remove('hidden');
@@ -118,16 +106,6 @@
                 }, 500);
             }
         }
-
-        // Click to select a seat
-        const seats = document.querySelectorAll('.seat');
-        seats.forEach(seat => {
-            seat.addEventListener('click', () => {
-                seat.classList.toggle('selected');
-                console.log("is selected");
-            });
-        });
-
         function loadReport() {
             const flightId = document.getElementById("flightId").value;
             fetch(`http://127.0.0.1:8000/api/report/${flightId}`, {
@@ -144,12 +122,11 @@
 
         $('#flightId').on('input', function() {
             const flightId = $(this).val();
-            console.log(flightId);
 
             if (flightId) {
-                $.get(`http://127.0.0.1:8000/api/report/${flightId}`, function(data) {
+                $.get(`http://127.0.0.1:8000/api/flightSeats/${flightId}`, function(data) {
                     $('#result').html(`Max Seats: ${data.capacity}`);
-                    console.log(`Max Seats: ${data.capacity}`);
+
                     const maxSeats = data.capacity;
                     const seatsPerSide = 3;
                     const seatsPerRow = seatsPerSide * 2;
@@ -159,91 +136,110 @@
                     const inputSelectedSeat = document.getElementById('seatNumber');
                     let previousButton = null;
 
+                    const reservedSeats = data.reservedSeats || [];
+                    container.innerHTML = '';
+
                     for (let row = 0; row < rows; row++) {
                         const rowDiv = document.createElement('div');
                         rowDiv.classList.add('row-container');
 
-                    //Left seats
-                    const seatsLeftDiv = document.createElement('div');
-                    seatsLeftDiv.classList.add('seats-left');
-                    for (let leftSeat = 0; leftSeat < seatsPerSide; leftSeat++) {
-                        if (seatNumber <= maxSeats) {
-                            const button = document.createElement('button');
-                            button.classList.add('seat');
-                            button.textContent = seatNumber;
-                            button.onclick = function(){
-                                const selectedValue = this.textContent;
-                                inputSelectedSeat.value = selectedValue;
-                                if (previousButton) {
-                                    previousButton.classList.remove('clicked');
+                        const seatsLeftDiv = document.createElement('div');
+                        seatsLeftDiv.classList.add('seats-left');
+                        for (let leftSeat = 0; leftSeat < seatsPerSide; leftSeat++) {
+                            if (seatNumber <= maxSeats) {
+                                const button = document.createElement('button');
+                                button.classList.add('seat');
+                                if (reservedSeats.includes(seatNumber.toString())) {;
+                                    button.classList.add('reserved');
+                                    button.disabled = true;
+                                    button.textContent = `R${seatNumber}`;
+                                } else {
+                                    button.textContent = seatNumber;
+                                    button.onclick = function() {
+                                        const selectedValue = this.textContent;
+                                        inputSelectedSeat.value = selectedValue;
+                                        if (previousButton) {
+                                            previousButton.classList.remove('clicked');
+                                        }
+                                        this.classList.add('clicked');
+                                        previousButton = this;
+                                    }
                                 }
-                                this.classList.add('clicked');
-                                previousButton = this;
+                                seatsLeftDiv.appendChild(button);
+                                seatNumber++; 
                             }
-                            seatsLeftDiv.appendChild(button);
-                            seatNumber++;
                         }
-                    }
+                        const aisleDiv = document.createElement('div');
+                        aisleDiv.classList.add('aisle');
 
-                    //(space between left and right)
-                    const aisleDiv = document.createElement('div');
-                    aisleDiv.classList.add('aisle');
+                        const seatsRightDiv = document.createElement('div');
+                        seatsRightDiv.classList.add('seats-right');
+                        for (let rightSeat = 0; rightSeat < seatsPerSide; rightSeat++) {
+                            if (seatNumber <= maxSeats) {
+                                const button = document.createElement('button');
+                                button.classList.add('seat');
 
-                    //Right seats
-                    const seatsRightDiv = document.createElement('div');
-                    seatsRightDiv.classList.add('seats-right');
-                    for (let rightSeat = 0; rightSeat < seatsPerSide; rightSeat++) {
-                        if (seatNumber <= maxSeats) {
-                            const button = document.createElement('button');
-                            button.classList.add('seat');
-                            button.textContent = seatNumber;
-                            button.onclick = function(){
-                                const selectedValue = this.textContent;
-                                inputSelectedSeat.value = selectedValue;
-                                if (previousButton) {
-                                    previousButton.classList.remove('clicked');
+                                if (reservedSeats.includes(seatNumber.toString())) {
+                                    button.classList.add('reserved');
+                                    button.disabled = true;
+                                    button.textContent = `R${seatNumber}`;
+                                } else {
+                                    button.textContent = seatNumber;
+                                    button.onclick = function() {
+                                        const selectedValue = this.textContent;
+                                        inputSelectedSeat.value = selectedValue;
+                                        if (previousButton) {
+                                            previousButton.classList.remove('clicked');
+                                        }
+                                        this.classList.add('clicked');
+                                        previousButton = this;
+                                    }
                                 }
-                                this.classList.add('clicked');
-                                previousButton = this;
+                                seatsRightDiv.appendChild(button);
+                                seatNumber++;
                             }
-                            seatsRightDiv.appendChild(button);
-                            seatNumber++;
                         }
-                    }
-                    rowDiv.appendChild(seatsLeftDiv);
-                    rowDiv.appendChild(aisleDiv);
-                    rowDiv.appendChild(seatsRightDiv);
-                    container.appendChild(rowDiv);
+                        rowDiv.appendChild(seatsLeftDiv);
+                        rowDiv.appendChild(aisleDiv);
+                        rowDiv.appendChild(seatsRightDiv);
+                        container.appendChild(rowDiv);
                     }
                 });
             }
         });
 
         //Book
-        function bookSeat() {
+        document.getElementById("submitBtn").addEventListener("click", () => {
             const seatData = {
                 flight_id: document.getElementById("flightId").value.trim(),
                 user_id: document.getElementById("passengerName").value.trim(),
-                seat_number: document.getElementById("passengerSeat").value.trim(),
+                seat_number: document.getElementById("seatNumber").value.trim(),
+                seat_type: document.getElementById("typeSeat").value.trim(),
             };
-            
-
-            
+            if (!flight_id || !user_id || !seat_number || !seat_type) {
+                console.error("One or more input fields are missing in the HTML.");
+                return;
+            }
             fetch('http://127.0.0.1:8000/api/book', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(seatData)
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(seatData)
                 })
-                .then(async (res) => {
-                const text = await res.text();
-                if (!res.ok) {
-                    throw new Error("Network response was not ok");
-                }
-                const data = JSON.parse(text);
-            })
-        }
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    console.log("Success:", data);
+                })
+                .catch(err => {
+                    console.error("Fetch error:", err);
+            });
+        });
     </script>
 
 </body>

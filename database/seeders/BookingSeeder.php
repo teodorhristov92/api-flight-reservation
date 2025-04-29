@@ -17,9 +17,8 @@ class BookingSeeder extends Seeder
     {
         $faker = Faker::create();
 
-        $flights = Flight::pluck('id')->all(); // взимаме всички flight_id
+        $flights = Flight::pluck('id')->all();
 
-        // 20 фалшиви резервации
         foreach (range(1, 20) as $i) {
             Booking::create([
                 'user_id' => $faker->randomDigitNotNull(),

@@ -196,3 +196,9 @@ p{
     background-color: #f1c232; /* Change this to your desired color */
     color: white;
 }
+
+
+.seat.reserved {
+    background-color: #f44336; /* Червено за резервирани */
+    color: white;
+}

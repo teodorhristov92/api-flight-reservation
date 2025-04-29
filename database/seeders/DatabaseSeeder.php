@@ -13,9 +13,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Flight::factory(5)->create(); // ако имаш фабрика за полети
+        Flight::factory(10)->create();
         $this->call(BookingSeeder::class);
-        // User::factory(10)->create();
 
         User::factory()->create([
             'name' => 'Test User',
