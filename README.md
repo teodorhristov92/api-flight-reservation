@@ -1,10 +1,15 @@
 ## Project setup
+
 composer install
+
 Windows command: copy .env.example .env
+
 php artisan key:generate
 
 ## DB 
+
 Create phpMyAdmin database with name - flight_reservation
+
 php artisan migrate
 
 ## Seeding
